@@ -116,8 +116,8 @@ struct io_iocb_common {
 };	/* result code is the amount read or -'ve errno */
 
 struct io_iocb_vector {
-	const struct iovec	*vec;
-	int			nr;
+	PADDEDptr(const struct iovec *vec, __pad1);
+	PADDED(int nr, __pad2);
 	long long		offset;
 };	/* result code is the amount read or -'ve errno */
 
