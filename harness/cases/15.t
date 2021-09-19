@@ -89,6 +89,42 @@ int test_main(void)
 	if (!status)
 		printf("Checking memory: [Success]\n");
 
+	/* Check that offset works. */
+	status |= attempt_rw_vec(rwfd, iov+1, NUM_IOV-1,  SIZE, WRITEV,
+			     SIZE*(NUM_IOV-1));
+	memset(buf, 0, sizeof(buf));
+	res = pread(rwfd, buf, sizeof(buf), 0);	assert(res == sizeof(buf));
+	for (i = 1; i < NUM_IOV; i++) {
+		unsigned int j;
+		for (j = 0; j < SIZE; j++) {
+			if (buf[i*SIZE + j] != i) {
+				printf("Unexpected value after offset writev at %i\n",
+				       i*SIZE + j);
+				status |= 1;
+				break;
+			}
+		}
+	}
+	if (!status)
+		printf("Checking memory: [Success]\n");
+
+	memset(buf, 0, sizeof(buf));
+	status |= attempt_rw_vec(rwfd, iov+1, NUM_IOV-1,  SIZE, READV,
+			     SIZE*(NUM_IOV-1));
+	for (i = 1; i < NUM_IOV; i++) {
+		unsigned int j;
+		for (j = 0; j < SIZE; j++) {
+			if (buf[i*SIZE + j] != i) {
+				printf("Unexpected value after offset readv at %i\n",
+				       i*SIZE + j);
+				status |= 1;
+				break;
+			}
+		}
+	}
+	if (!status)
+		printf("Checking memory: [Success]\n");
+
 	return status;
 }
 

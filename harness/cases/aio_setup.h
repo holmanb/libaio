@@ -106,3 +106,58 @@ int attempt_rw(int fd, void *buf, int count, long long pos, int rw, int expect)
 	return 0;
 }
 
+static inline void io_prep_preadv_vec(struct iocb *iocb, int fd, const struct iovec *iov, int iovcnt, long long offset)
+{
+	memset(iocb, 0, sizeof(*iocb));
+	iocb->aio_fildes = fd;
+	iocb->aio_lio_opcode = IO_CMD_PREADV;
+	iocb->aio_reqprio = 0;
+	iocb->u.v.vec = (void *)iov;
+	iocb->u.v.nr = iovcnt;
+	iocb->u.v.offset = offset;
+}
+
+static inline void io_prep_pwritev_vec(struct iocb *iocb, int fd, const struct iovec *iov, int iovcnt, long long offset)
+{
+	memset(iocb, 0, sizeof(*iocb));
+	iocb->aio_fildes = fd;
+	iocb->aio_lio_opcode = IO_CMD_PWRITEV;
+	iocb->aio_reqprio = 0;
+	iocb->u.v.vec = (void *)iov;
+	iocb->u.v.nr = iovcnt;
+	iocb->u.v.offset = offset;
+}
+
+int attempt_rw_vec(int fd, void *buf, int count, long long pos, int rw, int expect)
+{
+	struct iocb iocb;
+	int res;
+	int silent = 0;
+
+	switch(rw) {
+	case WRITEV:
+		io_prep_pwritev_vec(&iocb, fd, buf, count, pos);
+		break;
+	case READV:
+		io_prep_preadv_vec(&iocb, fd, buf, count, pos);
+		break;
+	}
+
+	if (!silent) {
+		printf("expect %5d: (%c), res = ", expect, rw);
+		fflush(stdout);
+	}
+	res = sync_submit(&iocb);
+	if (!silent || res != expect) {
+		if (silent)
+			printf("expect %5d: (%c), res = ", expect, rw);
+		printf("%5d [%s]%s\n", res,
+			(res <= 0) ? strerror(-res) : "Success",
+			(res != expect) ? " -- FAILED" : "");
+	}
+
+	if (res != expect)
+		return 1;
+
+	return 0;
+}
